@@ -107,10 +107,13 @@ async function loadApps() {
   renderApps();
 }
 
+// We store the current filtered list here so event handlers can reference apps by index
+let currentFilteredList = [];
+
 function renderApps(searchTerm = '') {
-  let filtered = appData;
+  let filtered = [...appData];
   if (searchTerm) {
-     filtered = appData.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()) || a.publisher.toLowerCase().includes(searchTerm.toLowerCase()));
+     filtered = filtered.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()) || a.publisher.toLowerCase().includes(searchTerm.toLowerCase()));
   }
 
   if (currentSort === 'size') {
@@ -118,6 +121,8 @@ function renderApps(searchTerm = '') {
   } else if (currentSort === 'name') {
      filtered.sort((a,b) => a.name.localeCompare(b.name));
   }
+
+  currentFilteredList = filtered;
 
   const tbody = document.getElementById('app-table-body');
   tbody.innerHTML = '';
@@ -127,35 +132,69 @@ function renderApps(searchTerm = '') {
      return;
   }
 
-  // Optimize render by just chunking or slicing if too large, but electron handles 500 rows easily.
   for (let i = 0; i < filtered.length; i++) {
     const app = filtered[i];
     const tr = document.createElement('tr');
     
     const iconId = 'icon-' + Math.random().toString(36).substr(2, 9);
     
-    tr.innerHTML = `
-      <td style="font-weight: 600; display: flex; align-items: center; gap: 12px;">
-         <img id="${iconId}" src="" alt="" style="width: 24px; height: 24px; border-radius: 4px; display: none;"> 
-         ${app.name}
-      </td>
-      <td style="color: var(--text-muted);">${app.publisher}</td>
-      <td style="color: var(--text-muted);">${app.version}</td>
-      <td style="color: var(--accent); font-weight: 600;">${app.size > 0 ? formatBytes(app.size) : 'Unknown'}</td>
-      <td style="display: flex; gap: 8px;">
-        ${app.location ? `<button class="btn-action" onclick="openLocation('${app.location.replace(/\\/g, '\\\\')}')">Folder</button>` : ``}
-        ${app.uninstallString ? `<button class="btn-action btn-danger" onclick="uninstallApp('${app.uninstallString.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">Uninstall</button>` : ``}
-      </td>
-    `;
+    // Build action buttons via DOM instead of inline onclick to avoid escaping issues
+    const tdName = document.createElement('td');
+    tdName.style.cssText = 'font-weight: 600; display: flex; align-items: center; gap: 12px;';
+    const img = document.createElement('img');
+    img.id = iconId;
+    img.style.cssText = 'width: 24px; height: 24px; border-radius: 4px; display: none;';
+    tdName.appendChild(img);
+    tdName.appendChild(document.createTextNode(app.name));
+
+    const tdPublisher = document.createElement('td');
+    tdPublisher.style.color = 'var(--text-muted)';
+    tdPublisher.textContent = app.publisher;
+
+    const tdVersion = document.createElement('td');
+    tdVersion.style.color = 'var(--text-muted)';
+    tdVersion.textContent = app.version;
+
+    const tdSize = document.createElement('td');
+    tdSize.style.cssText = 'color: var(--accent); font-weight: 600;';
+    tdSize.textContent = app.size > 0 ? formatBytes(app.size) : 'Unknown';
+
+    const tdActions = document.createElement('td');
+    tdActions.style.cssText = 'display: flex; gap: 8px;';
+
+    if (app.location) {
+      const btnFolder = document.createElement('button');
+      btnFolder.className = 'btn-action';
+      btnFolder.textContent = 'Folder';
+      btnFolder.dataset.action = 'folder';
+      btnFolder.dataset.index = i;
+      tdActions.appendChild(btnFolder);
+    }
+
+    if (app.uninstallString) {
+      const btnUninstall = document.createElement('button');
+      btnUninstall.className = 'btn-action btn-danger';
+      btnUninstall.textContent = 'Uninstall';
+      btnUninstall.dataset.action = 'uninstall';
+      btnUninstall.dataset.index = i;
+      tdActions.appendChild(btnUninstall);
+    }
+
+    tr.appendChild(tdName);
+    tr.appendChild(tdPublisher);
+    tr.appendChild(tdVersion);
+    tr.appendChild(tdSize);
+    tr.appendChild(tdActions);
     tbody.appendChild(tr);
 
+    // Load icon asynchronously
     if (app.iconString) {
        ipcRenderer.invoke('get-file-icon', app.iconString).then(dataUrl => {
            if(dataUrl) {
-              let img = document.getElementById(iconId);
-              if(img) {
-                 img.src = dataUrl;
-                 img.style.display = 'block';
+              let imgEl = document.getElementById(iconId);
+              if(imgEl) {
+                 imgEl.src = dataUrl;
+                 imgEl.style.display = 'block';
               }
            }
        });
@@ -163,19 +202,33 @@ function renderApps(searchTerm = '') {
   }
 }
 
-window.uninstallApp = (uninstallString) => {
-   if(confirm('¿Estás seguro de que quieres lanzar el desinstalador de esta aplicación?')) {
-      ipcRenderer.invoke('uninstall-app', uninstallString).then(res => {
-         if(!res.success) {
-             alert('Error: ' + res.msg);
-         }
-      });
-   }
-}
+// Event delegation on the table body — handles ALL button clicks robustly
+document.getElementById('app-table-body').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
 
-window.openLocation = (loc) => {
-   ipcRenderer.invoke('open-folder', loc);
-}
+  const idx = parseInt(btn.dataset.index, 10);
+  const app = currentFilteredList[idx];
+  if (!app) return;
+
+  if (btn.dataset.action === 'folder' && app.location) {
+    ipcRenderer.invoke('open-folder', app.location);
+  }
+
+  if (btn.dataset.action === 'uninstall' && app.uninstallString) {
+    if (confirm(`¿Estás seguro de que quieres desinstalar "${app.name}"?`)) {
+      ipcRenderer.invoke('uninstall-app', app.uninstallString).then(res => {
+        if (!res.success) {
+          alert('Error al desinstalar: ' + res.msg);
+        } else {
+          // Refresh the list after uninstall
+          btn.textContent = 'Done';
+          btn.disabled = true;
+        }
+      });
+    }
+  }
+});
 
 // Event Listeners
 document.getElementById('search-input').addEventListener('input', (e) => {
