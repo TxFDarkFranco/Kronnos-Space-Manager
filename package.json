@@ -1,0 +1,26 @@
+{
+  "name": "kronnos-storage-manager",
+  "version": "1.0.0",
+  "description": "PC Storage Manager developed by Kronnos",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.kronnos.spacemanager",
+    "productName": "Kronnos Space Manager",
+    "win": {
+      "target": ["nsis"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "author": "Kronnos",
+  "devDependencies": {
+    "electron": "^29.1.5",
+    "electron-builder": "^24.13.3"
+  }
+}

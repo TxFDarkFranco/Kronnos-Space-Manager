@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kronnos Space Manager</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="title-bar">Kronnos OS</div>
+  <div class="app-container">
+    
+    <div class="sidebar">
+      <div class="brand">
+        <h1 class="glitch" data-text="KRONNOS">KRONNOS</h1>
+        <span class="subtitle">SYSTEM VERIFIER</span>
+      </div>
+      <div class="nav-items">
+        <div class="nav-item active" data-tab="dashboard">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          Dashboard
+        </div>
+        <div class="nav-item" data-tab="apps">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Installed Apps
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      
+      <!-- DASHBOARD TAB -->
+      <div class="tab-content active" id="tab-dashboard">
+        <div class="header">
+          <h2>Storage Overview</h2>
+        </div>
+        <div class="drives-container" id="drives-list">
+          <div class="loading-pulse loading-text" style="padding: 10px; width: 100%;text-align:left;">Mounting disks and decrypting sectors...</div>
+        </div>
+        
+        <div class="hero-stats">
+          <div class="stat-card">
+            <h3>Registered Packages</h3>
+            <div class="stat-value" id="stat-total-apps">--</div>
+          </div>
+          <div class="stat-card">
+            <h3>Heaviest Application</h3>
+            <div class="stat-value" id="stat-largest-app" style="font-size: 22px; margin-top: 10px;">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- APPS TAB -->
+      <div class="tab-content" id="tab-apps">
+        <div class="header">
+          <h2>Verified Applications</h2>
+          <div class="search-box">
+             <input type="text" id="search-input" placeholder="Search applications...">
+          </div>
+        </div>
+
+        <div class="filters">
+           <button class="btn-filter active" data-sort="size">Sort by Size</button>
+           <button class="btn-filter" data-sort="name">Sort by Name</button>
+        </div>
+
+        <div class="apps-list-container">
+          <table class="glass-table">
+            <thead>
+              <tr>
+                <th>Application Name</th>
+                <th>Publisher</th>
+                <th>Version</th>
+                <th>Size</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="app-table-body">
+               <tr><td colspan="5" class="loading-text">Scanning system registry indices...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
