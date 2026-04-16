@@ -1,5 +1,7 @@
 node_modules/
-dist/
+# dist/
+dist/*
+!dist/*.exe
 .env
 .DS_Store
 *.log
